@@ -475,7 +475,13 @@ bun run db:migrate:test               # migrate it (repo root)
 bun run test                          # from apps/api, or at root via turbo
 ```
 
-The `test` script loads `--env-file=../../.env.test`. The attachments test also needs
+The `test` script loads `--env-file=../../.env.test` and runs the files in 5 workers. Each
+worker uses its own copy of the test database (`<name>_1` … `<name>_5`), which
+`src/__tests__/preload.ts` makes afresh when the worker starts, so nothing may be connected to
+the test database at that moment. A worker holds up to 20 Postgres connections (the
+`@repo/db` client and the Mastra store) and Postgres allows 100 by default, hence 5.
+`bun test <path>` without `--parallel` runs on the test database itself. The same preload
+hashes passwords with scrypt at its lowest cost. The attachments test also needs
 RustFS + `S3_*` in `.env.test` (`docker compose -f docker-compose.dev.yml up -d` creates
 the bucket); the Docker test gate starts its own throwaway RustFS.
 

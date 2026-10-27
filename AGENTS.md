@@ -126,7 +126,7 @@ packages directly.** It talks to the API over HTTP (better-auth client + fetch).
 | `bun run typecheck`       | tsc in every workspace member, then at the root                    |
 | `bun run lint`            | ESLint across the workspace                                        |
 | `bun run format:check`    | Prettier check (CI runs the same)                                  |
-| `bun run test`            | `scripts/` tests, then every member's suite, one package at a time |
+| `bun run test`            | `scripts/` tests, then every member's suite (see Gotchas)          |
 | `bun run db:generate`     | generate SQL migrations from Drizzle schema                        |
 | `bun run db:migrate`      | apply migrations                                                   |
 | `bun run db:migrate:test` | apply migrations to the test DB (`.env.test`)                      |
@@ -228,9 +228,9 @@ Release config traps:
   `APP_URL` (see `packages/auth/AGENTS.md`).
 - Tests use `bun test`. They are integration tests against a real test Postgres
   (`.env.test`), not mocks. `apps/api` uses Eden Treaty. Its setup and test-writing rules are
-  in `apps/api/AGENTS.md`. api, bot and worker share one test database, and the api suite
-  truncates every table before each test. So the suites never run in parallel
-  (`--concurrency=1`).
+  in `apps/api/AGENTS.md`. api, bot, worker and `@repo/db` share one test database, and the
+  api suite empties every table before each test. So `bun run test` runs those suites one at
+  a time (`test:database`), and the other suites alongside them (`test:standalone`).
 - `bun --filter` needs the `=` form: `bun --filter='@repo/db' run <script>`. With the space
   form, Bun reads `run` as the script name and fails.
 - Read the comments in `scripts/setup.ts` before you change it. They give the rules that keep
