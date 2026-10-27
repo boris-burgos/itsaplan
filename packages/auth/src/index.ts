@@ -1,4 +1,4 @@
-import { createHash, randomInt, timingSafeEqual } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { createWorkspace, db } from '@repo/db';
 import { and, eq, gt, isNull, sql, type SQL } from 'drizzle-orm';
 import { betterAuth, type BetterAuthPlugin } from 'better-auth';
@@ -555,18 +555,6 @@ const DAY_SEC = 24 * 60 * 60;
 export const API_KEY_DEFAULT_EXPIRES_IN_SEC = 90 * DAY_SEC;
 export const API_KEY_MAX_EXPIRES_IN_DAYS = 365;
 
-// better-auth hashes passwords with scrypt, about 180 ms per sign-up or sign-in. The
-// test suites create users in nearly every test, so under NODE_ENV=test a single
-// SHA-256 replaces it. The same NODE_ENV gate guards the test database reset.
-const testPasswordHasher = {
-  hash: async (password: string) => createHash('sha256').update(password).digest('hex'),
-  verify: async ({ hash, password }: { hash: string; password: string }) => {
-    const candidate = createHash('sha256').update(password).digest();
-    const stored = Buffer.from(hash, 'hex');
-    return stored.length === candidate.length && timingSafeEqual(stored, candidate);
-  },
-};
-
 // Created on first use rather than on import, so a build's extendAuth (./extensions) takes
 // effect wherever a bundler puts its module, as long as it runs before the first request.
 function createAuth() {
@@ -610,7 +598,7 @@ function createAuth() {
       // the old one ends with it. The signed-in change-password form sends
       // revokeOtherSessions for the same reason.
       revokeSessionsOnPasswordReset: true,
-      ...(process.env.NODE_ENV === 'test' ? { password: testPasswordHasher } : {}),
+      password: extensions.password,
       sendResetPassword: async ({ user, url }) => {
         await sendAuthEmail({
           to: user.email,
